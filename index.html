@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- Отключаем масштабирование, чтобы было удобно играть в кликер на телефоне -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TikTok Profile Clicker</title>
+    <!-- Подключаем Tailwind CSS для стилизации -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключаем Phosphor Icons для иконок, похожих на TikTok -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        /* Кастомный цвет TikTok (розово-красный) */
+        .bg-tiktok-red { background-color: #fe2c55; }
+        .text-tiktok-red { color: #fe2c55; }
+
+        /* Убираем синюю подсветку при нажатии на телефоне */
+        * { -webkit-tap-highlight-color: transparent; }
+        
+        /* Эффект глитча в стиле TikTok */
+        .tiktok-glitch {
+            text-shadow: 2px 2px 0px #25f4ee, -2px -2px 0px #fe2c55;
+        }
+
+        /* Плавные переходы для кнопок */
+        .btn-press { transition: transform 0.1s; }
+        .btn-press:active { transform: scale(0.95); }
+
+        /* Анимация всплывающих цифр в игре */
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+        .floating-number {
+            position: absolute;
+            font-weight: 900;
+            font-size: 2rem;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 100;
+        }
+
+        /* Анимации появления/исчезновения экрана игры */
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideOutDown {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(100%); opacity: 0; }
+        }
+        .game-enter { animation: slideInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        .game-exit { animation: slideOutDown 0.4s cubic-bezier(0.5, 0, 0, 1) forwards; }
+
+        /* Убираем скроллбар и блокируем сдвиг экрана (overscroll) */
+        ::-webkit-scrollbar { display: none; }
+        html, body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            overflow: hidden; 
+            overscroll-behavior: none; 
+            height: 100%;
+            width: 100%;
+            position: fixed;
+            touch-action: none;
+        }
+    </style>
+</head>
+<!-- Добавлено select-none для блокировки случайного выделения текста при кликах -->
+<body class="bg-black flex items-center justify-center h-full font-sans select-none">
+
+    <!-- Главный контейнер (Теперь работает как полноценное приложение на весь экран телефона) -->
+    <div class="bg-white w-full h-full max-w-[430px] relative overflow-hidden flex flex-col shadow-2xl">
+        
+        <!-- Header (Верхняя панель) -->
+        <header class="flex justify-between items-center px-4 py-3 min-h-[52px]">
+            <i class="ph ph-pencil-simple text-[22px] text-gray-800"></i>
+            <div class="flex items-center gap-4 text-[22px] text-gray-800">
+                <i class="ph ph-steps"></i>
+                <i class="ph ph-user-plus"></i>
+                <i class="ph ph-list"></i>
+            </div>
+        </header>
+
+        <!-- Основная область без прокрутки -->
+        <main class="flex-1 overflow-hidden pb-16">
+            
+            <!-- Шапка профиля: Асимметричный вариант (Аватар справа) -->
+            <div class="flex justify-between items-start mt-2 px-4">
+                
+                <!-- Левая часть: Имя и Статистика -->
+                <div class="flex flex-col">
+                    <!-- Имена -->
+                    <div class="flex items-center text-[18px] font-bold text-gray-900 leading-tight tracking-tight mt-1">
+                        mia_lovercutie <i class="ph-fill ph-caret-down text-sm ml-1"></i>
+                    </div>
+                    <div class="text-[14px] text-gray-500 mt-0.5">
+                        @mia_lovercutie
+                    </div>
+
+                    <!-- Статистика -->
+                    <div class="flex gap-6 mt-4">
+                        <div class="flex flex-col items-center">
+                            <span class="font-bold text-[17px] leading-tight">42</span>
+                            <span class="text-[13px] text-gray-500">Following</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <!-- Счетчик подписчиков -->
+                            <span id="followersDisplay" class="font-bold text-[17px] leading-tight">0</span>
+                            <span class="text-[13px] text-gray-500">Followers</span>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <span class="font-bold text-[17px] leading-tight">128</span>
+                            <span class="text-[13px] text-gray-500">Likes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Правая часть: Аватар -->
+                <div class="relative mt-2 mr-2">
+                    <!-- Кольцо аватара и аватар -->
+                    <div class="w-[90px] h-[90px] rounded-full border-[3px] border-[#20D5EC] p-[3px]">
+                        <!-- object-cover и object-center гарантируют, что девочка будет ровно посередине кружка без искажений -->
+                        <img src="https://cdn.imagetourls.com/uploads/tyImg/DMKmtC5k.jpg" alt="mia_lovercutie" class="w-full h-full rounded-full object-cover object-center">
+                    </div>
+
+                    <!-- Синий плюсик -->
+                    <button class="absolute bottom-0 right-0 w-[26px] h-[26px] bg-[#20D5EC] rounded-full border-[2.5px] border-white flex items-center justify-center text-white cursor-pointer shadow-sm">
+                        <i class="ph-bold ph-plus text-[14px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Кнопки действий и Био -->
+            <div class="flex flex-col items-start mt-4 px-4 w-full gap-3">
+                <!-- Био -->
+                <div class="flex items-center text-[13px]">
+                    <button class="font-semibold text-black">+ Add bio</button>
+                    <span class="mx-1.5 text-gray-300 font-bold">·</span>
+                    <span class="text-gray-400 flex items-center gap-1">
+                        <i class="ph ph-smiley text-[16px] text-[#9b66c4]"></i> My account is all about...
+                    </span>
+                </div>
+
+                <!-- TikTok Studio -->
+                <button class="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-full text-[14px] font-semibold text-gray-800 shadow-sm active:bg-gray-50 transition-colors">
+                    <i class="ph-fill ph-magic-wand text-tiktok-red text-[16px]"></i> TikTok Studio
+                </button>
+            </div>
+
+            <!-- Вкладки контента -->
+            <div class="flex border-b border-gray-200 mt-5">
+                <div class="flex-1 flex justify-center py-2.5 border-b-2 border-black">
+                    <div class="flex items-center text-black">
+                        <span class="tracking-tighter font-bold text-[15px] opacity-80">|||</span>
+                        <i class="ph-fill ph-caret-down text-[10px] ml-0.5 mt-0.5"></i>
+                    </div>
+                </div>
+                <div class="flex-1 flex justify-center py-2.5">
+                    <i class="ph ph-lock-key text-[22px] text-gray-400"></i>
+                </div>
+                <div class="flex-1 flex justify-center py-2.5">
+                    <i class="ph ph-arrows-left-right text-[22px] text-gray-400"></i>
+                </div>
+                <div class="flex-1 flex justify-center py-2.5">
+                    <i class="ph ph-bookmark-simple text-[22px] text-gray-400"></i>
+                </div>
+                <div class="flex-1 flex justify-center py-2.5">
+                    <i class="ph ph-heart text-[22px] text-gray-400"></i>
+                </div>
+            </div>
+
+            <!-- Сетка видео -->
+            <div class="grid grid-cols-3 gap-[1px]">
+                <!-- Видео 1 -->
+                <div class="relative aspect-[3/4] bg-gray-200 cursor-pointer group">
+                    <img src="https://cdn.imagetourls.com/uploads/tyImg/xiNYm7IA.jpg" alt="Video thumbnail" class="w-full h-full object-cover">
+                    <!-- Иконка в правом верхнем углу (как на скрине) -->
+                    <div class="absolute top-1.5 right-1.5 text-white opacity-90">
+                        <i class="ph ph-copy text-[18px]"></i>
+                    </div>
+                    <!-- Счетчик просмотров снизу слева -->
+                    <div class="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-white font-semibold text-[13px] drop-shadow-md">
+                        <i class="ph-light ph-play text-[18px]"></i>
+                        <span>0</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation (Нижняя панель) -->
+        <nav class="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-between items-center px-4 py-2 text-[10px] font-medium text-gray-500 pb-safe">
+            <div class="flex flex-col items-center gap-1 w-12 cursor-pointer">
+                <i class="ph ph-house text-[22px] text-gray-400"></i>
+                <span>Home</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 w-12 cursor-pointer">
+                <i class="ph ph-compass text-[22px] text-gray-400"></i>
+                <span>Discover</span>
+            </div>
+            
+            <!-- Кнопка "Плюс" в стиле TikTok (ЗАПУСКАЕТ ИГРУ) -->
+            <div id="openGameBtn" class="relative flex items-center justify-center cursor-pointer btn-press w-[45px] h-[28px] mx-2 mt-1">
+                <div class="absolute w-[42px] h-[28px] bg-[#20D5EC] rounded-[8px] -translate-x-[4px]"></div>
+                <div class="absolute w-[42px] h-[28px] bg-tiktok-red rounded-[8px] translate-x-[4px]"></div>
+                <div class="absolute w-[42px] h-[28px] bg-black rounded-[8px] z-10 flex items-center justify-center">
+                    <i class="ph-bold ph-plus text-[18px] text-white"></i>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center gap-1 w-12 cursor-pointer">
+                <i class="ph ph-chat-centered-text text-[22px] text-gray-400"></i>
+                <span>Inbox</span>
+            </div>
+            <div class="flex flex-col items-center gap-1 w-12 cursor-pointer text-black">
+                <i class="ph-fill ph-user text-[22px]"></i>
+                <span class="font-bold">Profile</span>
+            </div>
+        </nav>
+
+        <div id="gameOverlay" class="absolute inset-0 bg-black z-50 hidden flex-col items-center justify-start pt-24 overflow-hidden">
+            <!-- Фоны в стиле TikTok (неоновые засветы) -->
+            <div class="absolute top-[-10%] left-[-10%] w-72 h-72 bg-[#25f4ee] rounded-full mix-blend-screen filter blur-[120px] opacity-40 animate-pulse"></div>
+            <div class="absolute bottom-[-10%] right-[-10%] w-72 h-72 bg-[#fe2c55] rounded-full mix-blend-screen filter blur-[120px] opacity-40 animate-pulse" style="animation-delay: 1s;"></div>
+            
+            <!-- Динамичные полосы на фоне -->
+            <div class="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#fff_10px,#fff_11px)]"></div>
+
+            <!-- Интерфейс игры -->
+            <div class="text-center mb-10 z-10 relative">
+                <h2 class="text-white text-5xl font-black mb-3 italic tracking-wide tiktok-glitch uppercase leading-tight">TikTok<br>Booster</h2>
+                <p class="text-gray-300 text-md font-bold tracking-widest uppercase mt-2">Go Viral!</p>
+                
+                <div class="mt-6 relative inline-block group">
+                    <!-- Неоновая подложка счетчика -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#25f4ee] to-[#fe2c55] rounded-3xl blur-md opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="relative bg-black px-10 py-5 rounded-3xl border border-white/20 flex flex-col items-center min-w-[220px]">
+                        <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Total Followers</span>
+                        <span id="gameFollowersDisplay" class="text-white text-5xl font-black tiktok-glitch">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Главная кнопка кликера -->
+            <div class="relative z-10 mt-4">
+                <!-- Вращающееся свечение -->
+                <div class="absolute -inset-2 bg-gradient-to-r from-[#25f4ee] via-black to-[#fe2c55] rounded-full blur-xl opacity-60 animate-[spin_3s_linear_infinite]"></div>
+                <!-- Сама кнопка -->
+                <button id="tapBtn" class="relative w-52 h-52 rounded-full bg-black border-[4px] border-[#333] flex flex-col items-center justify-center cursor-pointer select-none outline-none transform transition-all duration-75 active:scale-90 active:border-[#25f4ee] touch-manipulation shadow-[0_0_50px_rgba(254,44,85,0.3)] group">
+                    <!-- Декоративные внутренние рамки -->
+                    <div class="absolute inset-0 rounded-full border-t-[4px] border-t-[#25f4ee] border-b-[4px] border-b-[#fe2c55] opacity-50 group-active:opacity-100 transition-opacity"></div>
+                    <i class="ph-fill ph-hand-tap text-white text-7xl mb-2 tiktok-glitch"></i>
+                    <span class="text-white font-black text-2xl tracking-widest uppercase tiktok-glitch mt-1">TAP</span>
+                </button>
+            </div>
+
+            <!-- Кнопка Activate (снизу) -->
+            <div class="absolute bottom-12 w-full px-8 z-20">
+                <button id="activateBtn" class="w-full relative btn-press group bg-tiktok-red text-white font-black text-xl tracking-widest py-4 rounded-xl shadow-[0_0_25px_rgba(254,44,85,0.5)] overflow-hidden transition-transform duration-200">
+                    <!-- Анимация блика и градиента при нажатии -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#25f4ee] to-[#fe2c55] opacity-0 group-active:opacity-100 transition-opacity duration-300"></div>
+                    <span class="relative z-10 tiktok-glitch uppercase">Activate</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Логика приложения и игры -->
+    <script>
+        // Состояние игры (количество подписчиков)
+        let followers = 0;
+
+        // Элементы DOM
+        const openGameBtn = document.getElementById('openGameBtn');
+        const activateBtn = document.getElementById('activateBtn');
+        const gameOverlay = document.getElementById('gameOverlay');
+        const tapBtn = document.getElementById('tapBtn');
+        const followersDisplay = document.getElementById('followersDisplay');
+        const gameFollowersDisplay = document.getElementById('gameFollowersDisplay');
+
+        // Функция форматирования чисел (например, 1000 -> 1K, 1500000 -> 1.5M)
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            }
+            if (num >= 10000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toLocaleString('en-US');
+        }
+
+        // Функция плавной анимации накрутки чисел
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                // Прогресс от 0 до 1
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                
+                // Плавное замедление к концу (easeOut)
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                const currentVal = Math.floor(easeOut * (end - start) + start);
+                
+                obj.textContent = formatNumber(currentVal);
+                
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    // Завершаем анимацию: фиксируем точное финальное число и возвращаем стиль
+                    obj.textContent = formatNumber(end);
+                    obj.classList.remove('text-tiktok-red', 'scale-125'); 
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Обновление счетчиков на странице
+        function updateDisplays() {
+            // Обновляем число только в окне игры (в профиле обновим плавно при активации)
+            gameFollowersDisplay.textContent = followers.toLocaleString('en-US');
+        }
+
+        // Открытие игры
+        openGameBtn.addEventListener('click', () => {
+            gameOverlay.classList.remove('hidden', 'game-exit');
+            gameOverlay.classList.add('flex', 'game-enter');
+        });
+
+        // Возврат в профиль (Активация накрутки)
+        activateBtn.addEventListener('click', () => {
+            gameOverlay.classList.remove('game-enter');
+            gameOverlay.classList.add('game-exit');
+            
+            setTimeout(() => {
+                gameOverlay.classList.add('hidden');
+                gameOverlay.classList.remove('flex', 'game-exit');
+                
+                if (followers > 0) {
+                    followersDisplay.classList.add('text-tiktok-red', 'scale-125', 'transition-all', 'duration-300');
+                    animateValue(followersDisplay, 0, followers, 1500);
+                }
+            }, 400);
+        });
+
+        // Универсальная и простая функция создания цифр "+10"
+        function createFloatingNumber() {
+            const floatingNum = document.createElement('div');
+            floatingNum.classList.add('floating-number', 'tiktok-glitch');
+            
+            // Чередуем цвета: бирюзовый и розово-красный
+            floatingNum.style.color = Math.random() > 0.5 ? '#25f4ee' : '#fe2c55';
+            floatingNum.textContent = '+10';
+
+            // Генерируем случайный разброс из центра кнопки (работает везде одинаково)
+            const offsetX = (Math.random() - 0.5) * 80;
+            const offsetY = (Math.random() - 0.5) * 40;
+            
+            floatingNum.style.left = `calc(50% - 20px + ${offsetX}px)`;
+            floatingNum.style.top = `calc(50% - 20px + ${offsetY}px)`;
+
+            tapBtn.appendChild(floatingNum);
+
+            setTimeout(() => floatingNum.remove(), 800);
+        }
+
+        // Нажатие на кнопку кликера (упрощенный и надежный вариант)
+        tapBtn.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            
+            followers += 10;
+            
+            // Легкая визуальная отдача самой кнопки
+            tapBtn.style.transform = 'scale(0.92)';
+            setTimeout(() => tapBtn.style.transform = 'scale(1)', 100);
+
+            updateDisplays();
+            createFloatingNumber();
+            
+            // Вибрация для мобильных устройств
+            if (window.navigator && window.navigator.vibrate) {
+                window.navigator.vibrate(10); 
+            }
+        });
+
+    </script>
+</body>
+</html>
