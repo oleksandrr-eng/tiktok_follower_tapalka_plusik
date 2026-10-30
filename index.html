@@ -53,6 +53,24 @@
         .game-enter { animation: slideInUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
         .game-exit { animation: slideOutDown 0.4s cubic-bezier(0.5, 0, 0, 1) forwards; }
 
+        /* Анимация эффектного появления галочки верификации */
+        @keyframes badgePop {
+            0% { transform: scale(0) rotate(-45deg); opacity: 0; filter: drop-shadow(0 0 0px #20D5EC); }
+            60% { transform: scale(1.45) rotate(12deg); opacity: 1; filter: drop-shadow(0 0 10px #20D5EC); }
+            80% { transform: scale(0.9) rotate(-4deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 3px rgba(32,213,236,0.6)); }
+        }
+        .badge-pop {
+            animation: badgePop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* Разрешаем скролл внутри меню настроек на мобильных */
+        .scrollable-touch {
+            touch-action: pan-y !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+        }
+
         /* Убираем скроллбар и блокируем сдвиг экрана (overscroll) */
         ::-webkit-scrollbar { display: none; }
         html, body { 
@@ -63,7 +81,6 @@
             height: 100%;
             width: 100%;
             position: fixed;
-            touch-action: none;
         }
     </style>
 </head>
@@ -79,24 +96,28 @@
             <div class="flex items-center gap-4 text-[22px] text-gray-800">
                 <i class="ph ph-steps"></i>
                 <i class="ph ph-user-plus"></i>
-                <i class="ph ph-list"></i>
+                <!-- Кнопка вызова меню -->
+                <i id="menuBtn" class="ph ph-list cursor-pointer active:opacity-60 transition-opacity"></i>
             </div>
         </header>
 
-        <!-- Основная область без прокрутки -->
-        <main class="flex-1 overflow-hidden pb-16">
+        <!-- Основная область со скроллом вниз -->
+        <main class="flex-1 overflow-y-auto scrollable-touch pb-24">
             
             <!-- Шапка профиля: Асимметричный вариант (Аватар справа) -->
             <div class="flex justify-between items-start mt-2 px-4">
                 
                 <!-- Левая часть: Имя и Статистика -->
                 <div class="flex flex-col">
-                    <!-- Имена -->
-                    <div class="flex items-center text-[18px] font-bold text-gray-900 leading-tight tracking-tight mt-1">
-                        mia_lovercutie <i class="ph-fill ph-caret-down text-sm ml-1"></i>
+                    <!-- Имя профиля -->
+                    <div class="text-[20px] font-bold text-gray-900 leading-tight tracking-tight mt-1">
+                        Mia Lopez
                     </div>
-                    <div class="text-[14px] text-gray-500 mt-0.5">
-                        @mia_lovercutie
+                    <!-- Никнейм с галочкой верификации (как в референсе) -->
+                    <div class="flex items-center gap-1 text-[14px] text-gray-500 mt-0.5">
+                        <span>@mia_lovercutie</span>
+                        <!-- Синяя галочка верификации из TikTok -->
+                        <img id="verifiedBadge" src="https://cdn.imagetourls.com/uploads/tyImg/bimaP1Y6.jpg" alt="Verified badge" class="w-[15px] h-[15px] rounded-full object-contain hidden inline-block ml-0.5">
                     </div>
 
                     <!-- Статистика -->
@@ -171,16 +192,14 @@
                 </div>
             </div>
 
-            <!-- Сетка видео -->
-            <div class="grid grid-cols-3 gap-[1px]">
-                <!-- Видео 1 -->
-                <div class="relative aspect-[3/4] bg-gray-200 cursor-pointer group">
+            <!-- Сетка видео (только ваше видео) -->
+            <div class="grid grid-cols-3 gap-[1px] bg-white">
+                <!-- Видео 1 (основное) -->
+                <div class="relative aspect-[3/4] bg-neutral-900 cursor-pointer overflow-hidden">
                     <img src="https://cdn.imagetourls.com/uploads/tyImg/xiNYm7IA.jpg" alt="Video thumbnail" class="w-full h-full object-cover">
-                    <!-- Иконка в правом верхнем углу (как на скрине) -->
                     <div class="absolute top-1.5 right-1.5 text-white opacity-90">
                         <i class="ph ph-copy text-[18px]"></i>
                     </div>
-                    <!-- Счетчик просмотров снизу слева -->
                     <div class="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-white font-semibold text-[13px] drop-shadow-md">
                         <i class="ph-light ph-play text-[18px]"></i>
                         <span>0</span>
@@ -189,8 +208,8 @@
             </div>
         </main>
 
-        <!-- Bottom Navigation (Нижняя панель) -->
-        <nav class="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-between items-center px-4 py-2 text-[10px] font-medium text-gray-500 pb-safe">
+        <!-- Bottom Navigation (Нижняя панель с высоким z-index) -->
+        <nav class="absolute bottom-0 w-full bg-white border-t border-gray-200 flex justify-between items-center px-4 py-2 text-[10px] font-medium text-gray-500 pb-safe z-30">
             <div class="flex flex-col items-center gap-1 w-12 cursor-pointer">
                 <i class="ph ph-house text-[22px] text-gray-400"></i>
                 <span>Home</span>
@@ -265,6 +284,317 @@
             </div>
         </div>
 
+        <!-- Нижняя шторка Меню (по референсу 1) -->
+        <div id="menuBackdrop" class="absolute inset-0 bg-black/40 z-40 hidden transition-opacity duration-300 opacity-0"></div>
+        <div id="menuSheet" class="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl z-50 transform translate-y-full transition-transform duration-300 ease-out flex flex-col max-h-[85%] pb-6">
+            <!-- Ручка для свайпа -->
+            <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto my-3"></div>
+
+            <div class="overflow-y-auto px-4 py-1 flex flex-col gap-4">
+                <!-- Assets -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-xs ml-2">Assets</span>
+                    <div class="flex items-center justify-between py-3 px-2 rounded-xl active:bg-gray-100 cursor-pointer mt-1">
+                        <div class="flex items-center gap-3.5 text-gray-800 font-medium text-[15px]">
+                            <i class="ph ph-wallet text-[22px]"></i>
+                            <span>Balance</span>
+                        </div>
+                        <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- Personal tools -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-xs ml-2">Personal tools</span>
+                    <div class="flex flex-col mt-1">
+                        <div class="flex items-center justify-between py-3 px-2 rounded-xl active:bg-gray-100 cursor-pointer">
+                            <div class="flex items-center gap-3.5 text-gray-800 font-medium text-[15px]">
+                                <i class="ph ph-clock text-[22px]"></i>
+                                <span>Activity center</span>
+                            </div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-3 px-2 rounded-xl active:bg-gray-100 cursor-pointer">
+                            <div class="flex items-center gap-3.5 text-gray-800 font-medium text-[15px]">
+                                <i class="ph ph-cloud-arrow-down text-[22px]"></i>
+                                <span>Offline videos</span>
+                            </div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between py-3 px-2 rounded-xl active:bg-gray-100 cursor-pointer">
+                            <div class="flex items-center gap-3.5 text-gray-800 font-medium text-[15px]">
+                                <i class="ph ph-qr-code text-[22px]"></i>
+                                <span>Your QR code</span>
+                            </div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Creation & business tools -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-xs ml-2">Creation & business tools</span>
+                    <div class="flex flex-col mt-1">
+                        <div class="flex items-center justify-between py-3 px-2 rounded-xl active:bg-gray-100 cursor-pointer">
+                            <div class="flex items-center gap-3.5 text-gray-800 font-medium text-[15px]">
+                                <i class="ph ph-sparkle text-[22px]"></i>
+                                <span>TikTok Studio</span>
+                            </div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <!-- Кнопка Settings and privacy -->
+                        <div id="openSettingsBtn" class="flex items-center justify-between py-3 px-2 rounded-xl active:bg-gray-100 cursor-pointer">
+                            <div class="flex items-center gap-3.5 text-gray-800 font-medium text-[15px]">
+                                <i class="ph ph-gear text-[22px]"></i>
+                                <span>Settings and privacy</span>
+                            </div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Полноэкранный экран "Settings and privacy" с прокруткой до самого низа -->
+        <div id="settingsPage" class="absolute inset-0 bg-[#f8f8f8] z-50 hidden flex flex-col transform translate-x-full transition-transform duration-300 ease-out overflow-hidden h-full">
+            <!-- Верхний навбар настроек -->
+            <header class="sticky top-0 bg-white border-b border-gray-100 flex items-center justify-between px-4 py-3 z-20 flex-shrink-0">
+                <button id="backFromSettingsBtn" class="text-2xl text-black active:opacity-60 flex items-center p-1">
+                    <i class="ph ph-arrow-left"></i>
+                </button>
+                <h1 class="text-[17px] font-bold text-gray-900 flex-1 text-center pr-7">Settings and privacy</h1>
+            </header>
+
+            <!-- Скроллящаяся зона со всеми категориями из референсов -->
+            <div class="flex-1 overflow-y-auto scrollable-touch min-h-0 pb-16 flex flex-col gap-3">
+                
+                <!-- Activity -->
+                <div class="mt-2">
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Activity</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-film-strip text-xl text-gray-600"></i><span>Manage posts</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-video-camera text-xl text-gray-600"></i><span>Content preferences</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-broadcast text-xl text-gray-600"></i><span>LIVE</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-bell-simple text-xl text-gray-600"></i><span>Notifications</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-hourglass-simple text-xl text-gray-600"></i><span>Time and well-being</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-users text-xl text-gray-600"></i><span>Family Pairing</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Account</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-user text-xl text-gray-600"></i><span>Account</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-shield-check text-xl text-gray-600"></i><span>Security & permissions</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-share-fat text-xl text-gray-600"></i><span>Share profile</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visibility -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Visibility</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-lock-key text-xl text-gray-600"></i><span>Private account</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-prohibit text-xl text-gray-600"></i><span>Blocked accounts</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactions -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Interactions</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-chat-circle-dots text-xl text-gray-600"></i><span>Comments</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-at text-xl text-gray-600"></i><span>Mentions</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-paper-plane-tilt text-xl text-gray-600"></i><span>Direct messages</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-video text-xl text-gray-600"></i><span>Reuse of content</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-link text-xl text-gray-600"></i><span>Display profile when sharing links</span></div>
+                            <div class="flex items-center gap-1 text-gray-400 text-sm"><span>On</span><i class="ph ph-caret-right text-xs"></i></div>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-download-simple text-xl text-gray-600"></i><span>Downloads</span></div>
+                            <div class="flex items-center gap-1 text-gray-400 text-sm"><span>On</span><i class="ph ph-caret-right text-xs"></i></div>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-users-three text-xl text-gray-600"></i><span>Following list</span></div>
+                            <div class="flex items-center gap-1 text-gray-400 text-sm"><span>Everyone</span><i class="ph ph-caret-right text-xs"></i></div>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-heart text-xl text-gray-600"></i><span>Liked videos</span></div>
+                            <div class="flex items-center gap-1 text-gray-400 text-sm"><span>Only you</span><i class="ph ph-caret-right text-xs"></i></div>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-eye text-xl text-gray-600"></i><span>Viewers</span></div>
+                            <div class="flex items-center gap-1 text-gray-400 text-sm"><span>On</span><i class="ph ph-caret-right text-xs"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content & Display -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Content & Display</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-music-note text-xl text-gray-600"></i><span>Music</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-chats text-xl text-gray-600"></i><span>Inbox & Messaging</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-clock text-xl text-gray-600"></i><span>Activity center</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-user-gear text-xl text-gray-600"></i><span>Audience control</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-megaphone text-xl text-gray-600"></i><span>Ads</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-play-circle text-xl text-gray-600"></i><span>Playback</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-moon text-xl text-gray-600"></i><span>Display</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-translate text-xl text-gray-600"></i><span>Language</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-person-arms-spread text-xl text-gray-600"></i><span>Accessibility</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-tiktok-red inline-block"></span><i class="ph ph-caret-right text-gray-400 text-sm"></i></div>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-map-pin text-xl text-gray-600"></i><span>Contacts and location</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cache & Cellular -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Cache & Cellular</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-cloud-arrow-down text-xl text-gray-600"></i><span>Offline videos</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-trash text-xl text-gray-600"></i><span>Free up space</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-activity text-xl text-gray-600"></i><span>Data Saver</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-image text-xl text-gray-600"></i><span>Wallpaper</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Support & About -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Support & About</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-headphones text-xl text-gray-600"></i><span>Help Center</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-lock-key text-xl text-gray-600"></i><span>Privacy Center</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-info text-xl text-gray-600"></i><span>Terms and Policies</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login -->
+                <div>
+                    <span class="text-gray-400 font-semibold text-[13px] px-5 mb-1 block">Login</span>
+                    <div class="bg-white rounded-2xl mx-3.5 divide-y divide-gray-50 overflow-hidden shadow-sm">
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-arrows-left-right text-xl text-gray-600"></i><span>Switch account</span></div>
+                            <div class="flex items-center gap-1.5"><span class="w-4 h-4 rounded-full bg-tiktok-red text-white text-[10px] flex items-center justify-center font-bold">0</span><i class="ph ph-caret-right text-gray-400 text-sm"></i></div>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]"><i class="ph ph-sign-out text-xl text-gray-600"></i><span>Log out</span></div>
+                            <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                        </div>
+                        <!-- Кнопка получения / снятия галочки верификации -->
+                        <div id="toggleVerifyBtn" class="flex items-center justify-between px-4 py-3.5 active:bg-gray-50 cursor-pointer transition-colors">
+                            <div class="flex items-center gap-3 text-gray-800 font-medium text-[15px]">
+                                <img src="https://cdn.imagetourls.com/uploads/tyImg/bimaP1Y6.jpg" alt="Verification check" class="w-5 h-5 object-contain">
+                                <span>Get account verified</span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="ph ph-caret-right text-gray-400 text-sm"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Версия TikTok в самом низу (по референсу) -->
+                <div class="text-center text-gray-400 text-xs py-4">v47.5.3(2024705030)</div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Логика приложения и игры -->
@@ -280,8 +610,150 @@
         const followersDisplay = document.getElementById('followersDisplay');
         const gameFollowersDisplay = document.getElementById('gameFollowersDisplay');
 
+        // Меню и Настройки
+        const menuBtn = document.getElementById('menuBtn');
+        const menuBackdrop = document.getElementById('menuBackdrop');
+        const menuSheet = document.getElementById('menuSheet');
+        const openSettingsBtn = document.getElementById('openSettingsBtn');
+        const settingsPage = document.getElementById('settingsPage');
+        const backFromSettingsBtn = document.getElementById('backFromSettingsBtn');
+
+        // Элементы верификации и геометрической прогрессии
+        const toggleVerifyBtn = document.getElementById('toggleVerifyBtn');
+        const verifiedBadge = document.getElementById('verifiedBadge');
+        let isVerified = false;
+        let geometricInterval = null;
+
+        // Запуск накрутки в геометрической прогрессии
+        function startGeometricProgression() {
+            if (geometricInterval) clearInterval(geometricInterval);
+            
+            // Если было 0, даем стартовое число, чтобы было что умножать
+            if (followers === 0) {
+                followers = 25;
+                followersDisplay.textContent = formatNumber(followers);
+            }
+
+            // Быстрый тикер каждые 120 мс для моментального взрывного роста
+            geometricInterval = setInterval(() => {
+                if (!isVerified) {
+                    clearInterval(geometricInterval);
+                    return;
+                }
+
+                // Быстрая геометрическая прогрессия (+15% и бонус каждые 120 мс)
+                followers = Math.round(followers * 1.15 + 18);
+
+                followersDisplay.textContent = formatNumber(followers);
+                gameFollowersDisplay.textContent = followers.toLocaleString('en-US');
+
+                // Легкая динамичная пульсация в такт накрутке
+                followersDisplay.classList.add('text-tiktok-red', 'scale-110');
+                setTimeout(() => {
+                    followersDisplay.classList.remove('scale-110');
+                }, 80);
+            }, 120);
+        }
+
+        // Остановка геометрической накрутки
+        function stopGeometricProgression() {
+            if (geometricInterval) {
+                clearInterval(geometricInterval);
+                geometricInterval = null;
+            }
+            followersDisplay.classList.remove('text-tiktok-red', 'scale-110');
+        }
+
+        // Функция списания подписчиков при снятии верификации
+        function drainFollowers() {
+            const startCount = followers;
+            followers = 0;
+            gameFollowersDisplay.textContent = '0';
+
+            if (startCount > 0) {
+                // Эффект оттока: цвет тускнеет, число стремительно падает до нуля
+                followersDisplay.classList.add('text-gray-400', 'scale-90', 'transition-all');
+                animateValue(followersDisplay, startCount, 0, 1000);
+                setTimeout(() => {
+                    followersDisplay.classList.remove('text-gray-400', 'scale-90');
+                }, 1100);
+            } else {
+                followersDisplay.textContent = '0';
+            }
+        }
+
+        // Клик по "Get account verified"
+        toggleVerifyBtn.addEventListener('click', () => {
+            isVerified = !isVerified;
+
+            // Мгновенный плавный переход обратно на страницу профиля
+            settingsPage.classList.add('translate-x-full');
+            setTimeout(() => {
+                settingsPage.classList.add('hidden');
+                settingsPage.classList.remove('flex');
+            }, 300);
+
+            if (isVerified) {
+                // Активируем галочку с анимацией
+                verifiedBadge.classList.remove('hidden', 'badge-pop');
+                void verifiedBadge.offsetWidth; // перезапуск CSS-анимации
+                verifiedBadge.classList.add('badge-pop');
+
+                // Запускаем геометрический буст
+                startGeometricProgression();
+            } else {
+                // Убираем галочку, останавливаем прогрессию и списываем подписчиков
+                verifiedBadge.classList.remove('badge-pop');
+                verifiedBadge.classList.add('hidden');
+                stopGeometricProgression();
+                drainFollowers();
+            }
+        });
+
+        // Открытие / закрытие нижней шторки меню
+        function openMenu() {
+            menuBackdrop.classList.remove('hidden');
+            setTimeout(() => {
+                menuBackdrop.classList.add('opacity-100');
+                menuSheet.classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        function closeMenu() {
+            menuBackdrop.classList.remove('opacity-100');
+            menuSheet.classList.add('translate-y-full');
+            setTimeout(() => {
+                menuBackdrop.classList.add('hidden');
+            }, 300);
+        }
+
+        menuBtn.addEventListener('click', openMenu);
+        menuBackdrop.addEventListener('click', closeMenu);
+
+        // Открытие страницы Settings and privacy
+        openSettingsBtn.addEventListener('click', () => {
+            closeMenu();
+            settingsPage.classList.remove('hidden');
+            settingsPage.classList.add('flex');
+            setTimeout(() => {
+                settingsPage.classList.remove('translate-x-full');
+            }, 20);
+        });
+
+        // Возврат из Settings and privacy обратно в профиль
+        backFromSettingsBtn.addEventListener('click', () => {
+            settingsPage.classList.add('translate-x-full');
+            setTimeout(() => {
+                settingsPage.classList.add('hidden');
+                settingsPage.classList.remove('flex');
+            }, 300);
+        });
+
         // Функция форматирования чисел (например, 1000 -> 1K, 1500000 -> 1.5M)
         function formatNumber(num) {
+            if (num >= 1000000000) {
+                return (num / 1000000000).toFixed(1) + 'B';
+            }
             if (num >= 1000000) {
                 return (num / 1000000).toFixed(1) + 'M';
             }
